@@ -41,6 +41,7 @@ export function ElementorInspector({ elementorData, className }: ElementorInspec
   const [viewMode, setViewMode] = useState<'tree' | 'raw'>('tree');
   const [isMinified, setIsMinified] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedClipboard, setCopiedClipboard] = useState(false);
   const [collapsedElements, setCollapsedElements] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNode, setSelectedNode] = useState<ElementNode | null>(null);
@@ -97,6 +98,21 @@ export function ElementorInspector({ elementorData, className }: ElementorInspec
       await navigator.clipboard.writeText(activeJson);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback
+    }
+  };
+
+  const handleCopyClipboard = async () => {
+    try {
+      const clipboardPayload = {
+        type: 'elementor',
+        siteurl: typeof window !== 'undefined' ? window.location.origin : '',
+        elements: content,
+      };
+      await navigator.clipboard.writeText(JSON.stringify(clipboardPayload));
+      setCopiedClipboard(true);
+      setTimeout(() => setCopiedClipboard(false), 2000);
     } catch {
       // Fallback
     }
@@ -299,10 +315,20 @@ export function ElementorInspector({ elementorData, className }: ElementorInspec
           <Button
             variant="outline"
             size="sm"
+            onClick={handleCopyClipboard}
+            title="Copy native payload to paste directly into Elementor canvas"
+            leftIcon={copiedClipboard ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+          >
+            {copiedClipboard ? 'Copied Clipboard' : 'Copy for Canvas'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleCopy}
+            title="Copy full Template JSON envelope"
             leftIcon={copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
           >
-            {copied ? 'Copied' : 'Copy'}
+            {copied ? 'Copied' : 'Copy JSON'}
           </Button>
           <Button variant="outline" size="sm" onClick={handleDownload} leftIcon={<Download className="h-3.5 w-3.5" />}>
             Download Template
