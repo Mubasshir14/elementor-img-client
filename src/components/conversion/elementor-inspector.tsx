@@ -135,7 +135,7 @@ export function ElementorInspector({ elementorData, className }: ElementorInspec
   };
 
   const version = String(elementorData.version || '0.4');
-  const elementorVersion = String((elementorData as any).elementor_version || '3.24.7');
+  const elementorVersion = String((elementorData as any).elementor_version || '');
   const templateType = String((elementorData as any).type || 'page');
   const title = String(elementorData.title || 'Elementor Page');
 
