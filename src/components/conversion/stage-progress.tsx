@@ -67,14 +67,14 @@ const PIPELINE_STEPS: StepConfig[] = [
   },
   {
     key: 'elementor_validation',
-    label: 'Stage D: Self-Healing & Verification',
-    description: 'Widget restoration audit & 100% deployable schema gate',
+    label: 'Stage D: Structural Verification',
+    description: 'Schema, hierarchy and individual element checks',
     icon: FileCheck,
   },
   {
     key: 'preview_rendering',
     label: 'Preview & QA',
-    description: 'Generating visual preview and inspectable artifacts',
+    description: 'Requires a WordPress render; visual fidelity is unmeasured',
     icon: Eye,
   },
   {
@@ -100,6 +100,8 @@ export function StageProgress({
   });
 
   const getStepStatus = (stepKey: StageName, stepIndex: number): StageStatus => {
+    if (stepKey === 'preview_rendering' && !stageMap.has(stepKey)) return 'skipped';
+    if (overallStatus === 'failed' && currentStage === stepKey) return 'failed';
     // If recorded in stages list:
     const recorded = stageMap.get(stepKey);
     if (recorded) {
@@ -256,6 +258,7 @@ export function StageProgress({
                     {status === 'failed' && (
                       <Badge variant="error">Failed</Badge>
                     )}
+                    {status === 'skipped' && <Badge variant="neutral">Not performed</Badge>}
                     {status === 'pending' && (
                       <Badge variant="neutral">Pending</Badge>
                     )}

@@ -27,7 +27,14 @@ apiClient.interceptors.request.use(
 
 // Response interceptor for token expiry / error formatting
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.config.responseType === 'blob' && response.data instanceof Blob) return response;
+    const body = response.data;
+    if (!body || typeof body !== 'object' || body.success !== true) {
+      return Promise.reject(new Error(body?.error?.message || 'The server returned an invalid or unsuccessful response'));
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       if (typeof window !== 'undefined') {
@@ -289,12 +296,21 @@ export const api = {
           },
         }
       );
-      return res.data.data;
+      const result = res.data.data;
+      if (!result?.project?.id || !result?.job?.id || !result?.asset?.id || result.job.projectId !== result.project.id || result.job.sourceAssetId !== result.asset.id) {
+        throw new Error('The upload response is incomplete or does not match its conversion job');
+      }
+      return result;
     },
   },
 
   // Conversion Jobs
   jobs: {
+    getSourceImage: async (jobId: string): Promise<Blob> => {
+      const response = await apiClient.get<Blob>(`/jobs/${jobId}/source`, { responseType: 'blob' });
+      if (!response.data.type.startsWith('image/')) throw new Error('The source response is not an image');
+      return response.data;
+    },
     getJob: async (jobId: string): Promise<ConversionJob> => {
       const res = await apiClient.get<ApiResponse<ConversionJob>>(`/jobs/${jobId}`);
       return res.data.data;

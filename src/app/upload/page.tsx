@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useDropzone } from 'react-dropzone';
@@ -36,6 +36,8 @@ export default function UploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl); }, [previewUrl]);
   const [quickLoginLoading, setQuickLoginLoading] = useState(false);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -45,6 +47,8 @@ export default function UploadPage() {
       'image/webp': ['.webp'],
     },
     maxFiles: 1,
+    maxSize: 524288000,
+    onDropRejected: (files) => toast.error(files[0]?.errors[0]?.message || 'Use a PNG, JPEG or WebP image under 500 MB'),
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
@@ -100,9 +104,10 @@ export default function UploadPage() {
 
     setIsSubmitting(true);
     try {
-      await api.upload.uploadImage(selectedFile, projectName);
+      setUploadProgress(0);
+      const result = await api.upload.uploadImage(selectedFile, projectName, setUploadProgress);
       toast.success('Design uploaded successfully! Conversion pipeline queued.');
-      router.push('/');
+      router.push(`/projects/${result.project.id}`);
     } catch (err: any) {
       toast.error(err.response?.data?.error?.message || err.message || 'Upload failed');
     } finally {
@@ -332,7 +337,7 @@ export default function UploadPage() {
               className="shadow-lg shadow-primary/20"
               leftIcon={<Sparkles className="w-4 h-4" />}
             >
-              {isSubmitting ? 'Processing Pipeline...' : 'Start Conversion Pipeline'}
+              {isSubmitting ? (uploadProgress < 100 ? `Uploading ${uploadProgress}%` : 'Validating upload...') : 'Start Conversion Pipeline'}
             </Button>
           </motion.div>
         </form>

@@ -40,8 +40,22 @@ export default function ProjectDetailPage() {
   const [elementorData, setElementorData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'status' | 'dir' | 'elementor'>('status');
+  const [sourceUrl, setSourceUrl] = useState<string | null>(null);
+  const [sourceError, setSourceError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+    setSourceUrl(null); setSourceError(null);
+    if (job?.id && job?.sourceAssetId) {
+      api.jobs.getSourceImage(job.id).then(blob => {
+        if (active) { objectUrl = URL.createObjectURL(blob); setSourceUrl(objectUrl); }
+      }).catch((error: Error) => { if (active) setSourceError(error.message); });
+    }
+    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [job?.id, job?.sourceAssetId]);
 
   const handleDeleteProject = async () => {
     setDeleting(true);
@@ -118,7 +132,8 @@ export default function ProjectDetailPage() {
     );
   }
 
-  const isReady = job?.status === 'preview_ready' || job?.status === 'published';
+  const isReady = (job?.status === 'preview_ready' || job?.status === 'published') && Boolean(elementorData);
+  const quality = job?.stages?.find((stage: any) => stage.stage === 'elementor_validation')?.outputPayload?.qualityAudit;
   const isFailed = job?.status === 'failed';
 
   return (
@@ -156,7 +171,7 @@ export default function ProjectDetailPage() {
                 <RefreshCw className="w-3.5 h-3.5" /> Retry Failed Stage
               </Button>
             )}
-            {elementorData && (
+            {isReady && (
               <>
                 <Button
                   variant="outline"
@@ -186,6 +201,12 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
+        {isReady && (
+          <div role="status" className="p-4 rounded-xl border border-border text-sm">
+            <p>Elementor JSON generated. Visual fidelity has not been measured against a rendered WordPress page.</p>
+            {quality?.warnings?.map((warning: string, index: number) => <p key={index}>{warning}</p>)}
+          </div>
+        )}
         {/* Navigation Tabs Bar */}
         <div className="flex border-b border-border space-x-6 text-sm font-medium overflow-x-auto">
           <button
@@ -248,7 +269,7 @@ export default function ProjectDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <StageProgress overallStatus={job?.status || 'queued'} stages={job?.stages || []} />
+                  <StageProgress currentStage={job?.currentStage} overallStatus={job?.status || 'queued'} stages={job?.stages || []} />
                 </CardContent>
               </Card>
 
@@ -271,11 +292,11 @@ export default function ProjectDetailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {project?.assets?.find((a: any) => a.type === 'ORIGINAL_IMAGE') ? (
+                  {sourceUrl ? (
                     <div className="border border-border rounded-lg p-2 bg-secondary/30 text-center">
                       <p className="text-[11px] text-muted-foreground mb-2">Original Upload Asset</p>
                       <img
-                        src={`http://localhost:4000/storage/${project.assets[0].storagePath}`}
+                        src={sourceUrl}
                         alt="Source design"
                         className="max-h-64 mx-auto rounded-md object-contain border border-border shadow-sm"
                         onError={(e) => {
@@ -285,7 +306,7 @@ export default function ProjectDetailPage() {
                     </div>
                   ) : (
                     <div className="p-8 text-center text-xs text-muted-foreground border border-dashed border-border rounded-lg">
-                      Source mockup asset registered in repository
+                      {sourceError || 'Loading the screenshot associated with this conversion...'}
                     </div>
                   )}
                 </CardContent>

@@ -692,3 +692,12 @@ A Next.js 14 frontend and an Express + PostgreSQL backend. Conversion jobs are e
 2. Update `server/src/routes/sites.ts` `siteCreateSchema` to accept nested credentials to match the frontend form.
 3. Connect a real WordPress 6.8+ / Elementor 4.3+ staging site to test end-to-end live MCP publishing.
 
+
+
+## Conversion contract update (October 20, 2026)
+
+Uploads support PNG, JPEG and static WebP (up to the configured server limits). Upload progress measures bytes transferred; conversion proceeds asynchronously in the server worker. Successful uploads redirect to the returned project and retain the source asset/job association.
+
+`preview_ready` means generated JSON is available for inspection. It does not certify a rendered page or measured visual fidelity. Structural warnings are shown, unperformed rendering is marked explicitly, and failed jobs are not offered as publish-ready results. Source screenshots are loaded from the authenticated `/api/v1/jobs/:id/source` endpoint with the existing API client, without a hardcoded storage host.
+
+`npm test` passes 21 tests, `npm run typecheck` passes, `npm run lint` passes with existing warnings, and `npm run build` passes. Live WordPress import/render fidelity has not been tested.
